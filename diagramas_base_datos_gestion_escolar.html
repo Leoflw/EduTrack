@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagramas BD - Gestión Escolar</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#121a2f; --panel2:#18223b; --text:#eef2ff; --muted:#aab5d1;
+    --accent:#76a9ff; --accent2:#67e8c7; --warn:#ffd166; --danger:#ff7b8a;
+    --line:#53627f; --shadow:0 16px 40px rgba(0,0,0,.28);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(135deg,#080c18,#0f1730 55%,#081120);color:var(--text);font-family:Segoe UI,Arial,sans-serif;line-height:1.45}
+  header{padding:28px 34px 18px;position:sticky;top:0;z-index:10;background:rgba(11,16,32,.94);backdrop-filter:blur(10px);border-bottom:1px solid #26324f}
+  h1{margin:0 0 6px;font-size:28px}
+  h2{margin:0 0 10px;font-size:21px}
+  h3{margin:18px 0 8px;font-size:16px}
+  p{color:var(--muted)}
+  .sub{max-width:1100px}
+  nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  nav button{border:1px solid #2c3a5c;background:#111a30;color:var(--text);padding:8px 12px;border-radius:10px;cursor:pointer}
+  nav button:hover, nav button.active{background:#1b2a49;border-color:#5278ba}
+  main{max-width:1500px;margin:0 auto;padding:24px}
+  section{background:rgba(18,26,47,.86);border:1px solid #26324f;border-radius:18px;box-shadow:var(--shadow);padding:22px;margin-bottom:24px}
+  .note{background:#0e1830;border-left:4px solid var(--accent2);padding:12px 14px;border-radius:8px;color:#dbe6ff}
+  .warn{background:#241e0d;border-left:4px solid var(--warn);padding:12px 14px;border-radius:8px;color:#f7e9b8}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .card{background:var(--panel2);border:1px solid #2a3859;border-radius:14px;padding:14px}
+  .tag{display:inline-block;padding:3px 7px;border-radius:99px;font-size:11px;background:#253354;color:#cfe0ff;margin:2px 3px 2px 0}
+  .diagram-wrap{overflow:auto;border-radius:14px;border:1px solid #283655;background:#0a1020}
+  svg{display:block;min-width:1100px}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+  .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted);font-size:13px}
+  .dot{width:12px;height:12px;border-radius:50%;display:inline-block}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border-bottom:1px solid #2a3651;padding:9px;text-align:left}
+  th{color:#cfe0ff;background:#10182c}
+  code{background:#0b1224;padding:2px 6px;border-radius:5px;color:#bfe3ff}
+  .small{font-size:12px;color:var(--muted)}
+  .footer{color:#8e9ab6;font-size:12px;text-align:center;padding:20px}
+  .pill{border:1px solid #36517b;padding:7px 10px;border-radius:99px;display:inline-block;background:#111b33;margin:3px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Modelo de datos y arquitectura — Gestión Escolar</h1>
+  <p class="sub">Propuesta visual para un colegio de preescolar y básica primaria. Incluye gestión académica, actividades, entregas, asistencia, observaciones, acompañamiento y comunicación. La matrícula y las finanzas quedan fuera del alcance.</p>
+  <nav>
+    <button onclick="go('resumen')">Resumen</button>
+    <button onclick="go('er')">Entidad-Relación</button>
+    <button onclick="go('rel')">Modelo relacional</button>
+    <button onclick="go('uml')">UML clases</button>
+    <button onclick="go('use')">Casos de uso</button>
+    <button onclick="go('act')">Flujos</button>
+    <button onclick="go('seq')">Secuencia</button>
+    <button onclick="go('arch')">Arquitectura</button>
+    <button onclick="go('reglas')">Reglas</button>
+  </nav>
+</header>
+
+<main>
+<section id="resumen">
+  <h2>1. Resumen del diseño</h2>
+  <div class="grid">
+    <div class="card"><strong>Base de datos</strong><p>PostgreSQL administrado en la nube, por ejemplo Supabase.</p></div>
+    <div class="card"><strong>Acceso del acudiente</strong><p>El portal del acudiente se identifica mediante el <code>codigo_carnet</code> único del estudiante, sin iniciar sesión con correo/contraseña.</p></div>
+    <div class="card"><strong>Archivos</strong><p>PDF, DOC/DOCX, JPG/PNG y enlaces externos se almacenan fuera de las tablas como objetos; la BD guarda metadatos y URLs.</p></div>
+    <div class="card"><strong>Evaluación</strong><p>Se soportan desempeños, nivel cualitativo y valor numérico por periodo, para primaria y preescolar.</p></div>
+  </div>
+  <div class="note">
+    <strong>Cambio de acceso:</strong> el estudiante posee un <code>codigo_carnet</code> único. El acudiente utiliza ese código para entrar al portal asociado al estudiante. Este modelo debe validarse con el colegio porque un mismo estudiante puede tener más de un acudiente.
+  </div>
+</section>
+
+<section id="er">
+<h2>2. Diagrama Entidad-Relación</h2>
+<p>Vista conceptual: muestra las entidades principales y cómo se conectan.</p>
+<div class="legend">
+  <span><i class="dot" style="background:#76a9ff"></i> Académico</span>
+  <span><i class="dot" style="background:#67e8c7"></i> Evaluación</span>
+  <span><i class="dot" style="background:#ffd166"></i> Actividades</span>
+  <span><i class="dot" style="background:#ff8fa3"></i> Seguimiento</span>
+</div>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1450 900">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#7183a8"/></marker>
+    <style>
+      .e{fill:#16233e;stroke:#76a9ff;stroke-width:2}.ea{fill:#12332f;stroke:#67e8c7;stroke-width:2}.ep{fill:#342a12;stroke:#ffd166;stroke-width:2}.es{fill:#361923;stroke:#ff8fa3;stroke-width:2}
+      .t{fill:#eef2ff;font:700 15px Segoe UI}.f{fill:#c0c9df;font:12px Segoe UI}.r{stroke:#66789e;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <text x="40" y="35" class="t" font-size="20">Gestión Escolar — ER conceptual</text>
+  <!-- entities -->
+  <rect x="60" y="80" rx="12" width="190" height="95" class="e"/><text x="155" y="107" text-anchor="middle" class="t">USUARIO</text><text x="75" y="132" class="f">id_usuario · rol · correo</text><text x="75" y="151" class="f">estado · último_acceso</text>
+  <rect x="330" y="70" rx="12" width="210" height="120" class="e"/><text x="435" y="98" text-anchor="middle" class="t">ESTUDIANTE</text><text x="345" y="125" class="f">id_estudiante · nombre</text><text x="345" y="144" class="f">fecha_nacimiento · estado</text><text x="345" y="163" class="f">codigo_carnet (UNIQUE)</text>
+  <rect x="640" y="70" rx="12" width="190" height="120" class="e"/><text x="735" y="98" text-anchor="middle" class="t">ACUDIENTE</text><text x="655" y="125" class="f">id_acudiente · nombre</text><text x="655" y="144" class="f">documento · teléfono</text><text x="655" y="163" class="f">correo · parentesco</text>
+  <rect x="930" y="70" rx="12" width="190" height="100" class="e"/><text x="1025" y="98" text-anchor="middle" class="t">DOCENTE</text><text x="945" y="125" class="f">id_docente · nombre</text><text x="945" y="144" class="f">documento · estado</text>
+  <rect x="1210" y="70" rx="12" width="170" height="100" class="e"/><text x="1295" y="98" text-anchor="middle" class="t">CURSO</text><text x="1225" y="125" class="f">id_curso · nombre</text><text x="1225" y="144" class="f">grado · año</text>
+
+  <rect x="75" y="275" rx="12" width="210" height="105" class="e"/><text x="180" y="303" text-anchor="middle" class="t">AÑO ACADÉMICO</text><text x="90" y="330" class="f">id_anio · año</text><text x="90" y="349" class="f">fecha_inicio · fecha_fin</text>
+  <rect x="355" y="270" rx="12" width="190" height="115" class="e"/><text x="450" y="298" text-anchor="middle" class="t">PERIODO</text><text x="370" y="324" class="f">id_periodo · nombre</text><text x="370" y="343" class="f">número · fechas</text>
+  <rect x="615" y="270" rx="12" width="230" height="120" class="e"/><text x="730" y="298" text-anchor="middle" class="t">COMPONENTE</text><text x="630" y="325" class="f">id_componente · nombre</text><text x="630" y="344" class="f">tipo: asignatura/dimensión</text><text x="630" y="363" class="f">nivel: preescolar/primaria</text>
+  <rect x="930" y="265" rx="12" width="220" height="125" class="e"/><text x="1040" y="293" text-anchor="middle" class="t">ASIGNACIÓN DOCENTE</text><text x="945" y="320" class="f">docente + curso</text><text x="945" y="339" class="f">+ componente</text>
+  <rect x="1230" y="270" rx="12" width="150" height="115" class="ea"/><text x="1305" y="298" text-anchor="middle" class="t">DESEMPEÑO</text><text x="1242" y="325" class="f">descripción</text><text x="1242" y="344" class="f">periodo · curso</text><text x="1242" y="363" class="f">componente</text>
+
+  <rect x="330" y="470" rx="12" width="240" height="125" class="ea"/><text x="450" y="498" text-anchor="middle" class="t">EVALUACIÓN</text><text x="345" y="525" class="f">estudiante + desempeño</text><text x="345" y="544" class="f">nivel_desempeño</text><text x="345" y="563" class="f">valor_numérico</text><text x="345" y="582" class="f">observación</text>
+  <rect x="650" y="470" rx="12" width="210" height="120" class="ep"/><text x="755" y="498" text-anchor="middle" class="t">ACTIVIDAD</text><text x="665" y="525" class="f">título · descripción</text><text x="665" y="544" class="f">publicación · límite</text><text x="665" y="563" class="f">asignación docente</text>
+  <rect x="920" y="470" rx="12" width="190" height="120" class="ep"/><text x="1015" y="498" text-anchor="middle" class="t">ENTREGA</text><text x="935" y="525" class="f">estudiante + actividad</text><text x="935" y="544" class="f">fecha · estado</text><text x="935" y="563" class="f">retroalimentación</text>
+  <rect x="1175" y="470" rx="12" width="190" height="110" class="ep"/><text x="1270" y="498" text-anchor="middle" class="t">ARCHIVO / ENLACE</text><text x="1190" y="525" class="f">URL · tipo · nombre</text><text x="1190" y="544" class="f">actividad o entrega</text>
+
+  <rect x="70" y="675" rx="12" width="200" height="110" class="es"/><text x="170" y="703" text-anchor="middle" class="t">ASISTENCIA</text><text x="85" y="730" class="f">estudiante · curso</text><text x="85" y="749" class="f">fecha · estado</text><text x="85" y="768" class="f">observación</text>
+  <rect x="330" y="675" rx="12" width="215" height="110" class="es"/><text x="438" y="703" text-anchor="middle" class="t">OBSERVACIÓN</text><text x="345" y="730" class="f">estudiante · docente</text><text x="345" y="749" class="f">tipo · descripción</text><text x="345" y="768" class="f">privacidad</text>
+  <rect x="620" y="670" rx="12" width="230" height="120" class="es"/><text x="735" y="698" text-anchor="middle" class="t">CASO ACOMPAÑAMIENTO</text><text x="635" y="725" class="f">estudiante · creador</text><text x="635" y="744" class="f">tipo · prioridad · estado</text><text x="635" y="763" class="f">responsable · cierre</text>
+  <rect x="920" y="675" rx="12" width="200" height="110" class="es"/><text x="1020" y="703" text-anchor="middle" class="t">SEGUIMIENTO</text><text x="935" y="730" class="f">caso · usuario</text><text x="935" y="749" class="f">acción · resultado</text><text x="935" y="768" class="f">próxima fecha</text>
+  <rect x="1180" y="675" rx="12" width="190" height="110" class="e"/><text x="1275" y="703" text-anchor="middle" class="t">COMUNICADO</text><text x="1195" y="730" class="f">título · contenido</text><text x="1195" y="749" class="f">publicación · estado</text><text x="1195" y="768" class="f">creador</text>
+
+  <!-- relations -->
+  <path d="M250 127L330 127" class="r"/>
+  <path d="M540 130L640 130" class="r"/>
+  <path d="M830 130L930 125" class="r"/>
+  <path d="M1120 120L1210 120" class="r"/>
+  <path d="M180 380L390 460" class="r"/>
+  <path d="M450 385L445 470" class="r"/>
+  <path d="M730 390L710 470" class="r"/>
+  <path d="M1040 390L855 470" class="r"/>
+  <path d="M1230 325L1110 330" class="r"/>
+  <path d="M570 530L650 530" class="r"/>
+  <path d="M860 530L920 530" class="r"/>
+  <path d="M1110 530L1175 530" class="r"/>
+  <path d="M450 595L450 675" class="r"/>
+  <path d="M760 590L735 670" class="r"/>
+  <path d="M1100 590L1020 675" class="r"/>
+  <path d="M850 730L920 730" class="r"/>
+</svg>
+</div>
+<p class="small">Nota: las cardinalidades detalladas se muestran en el modelo relacional de la siguiente sección.</p>
+</section>
+
+<section id="rel">
+<h2>3. Modelo relacional / esquema lógico</h2>
+<p>Esta vista muestra las tablas que posteriormente pueden convertirse a PostgreSQL.</p>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1500 1180">
+<style>
+.box{fill:#111b31;stroke:#4e648e;stroke-width:2}.pk{fill:#263f68}.fk{fill:#1e3f42}.tt{fill:#eef2ff;font:700 14px Segoe UI}.ff{fill:#bfc9df;font:11px Consolas,monospace}.ln{stroke:#60759b;stroke-width:1.7;fill:none}
+</style>
+<text x="28" y="30" class="tt" font-size="20">Esquema lógico — PK = clave primaria, FK = clave foránea</text>
+
+<!-- compact table helper manually -->
+<g transform="translate(30,60)">
+  <rect width="250" height="120" rx="10" class="box"/><rect width="250" height="28" rx="10" class="pk"/><text x="125" y="19" text-anchor="middle" class="tt">USUARIOS</text>
+  <text x="12" y="48" class="ff">PK id_usuario</text><text x="12" y="66" class="ff">correo</text><text x="12" y="84" class="ff">rol</text><text x="12" y="102" class="ff">estado</text>
+</g>
+<g transform="translate(330,60)">
+  <rect width="280" height="145" rx="10" class="box"/><rect width="280" height="28" rx="10" class="pk"/><text x="140" y="19" text-anchor="middle" class="tt">ESTUDIANTES</text>
+  <text x="12" y="48" class="ff">PK id_estudiante</text><text x="12" y="66" class="ff">codigo_carnet UNIQUE</text><text x="12" y="84" class="ff">nombres / apellidos</text><text x="12" y="102" class="ff">fecha_nacimiento</text><text x="12" y="120" class="ff">estado</text>
+</g>
+<g transform="translate(660,60)">
+  <rect width="260" height="145" rx="10" class="box"/><rect width="260" height="28" rx="10" class="pk"/><text x="130" y="19" text-anchor="middle" class="tt">ACUDIENTES</text>
+  <text x="12" y="48" class="ff">PK id_acudiente</text><text x="12" y="66" class="ff">nombres / apellidos</text><text x="12" y="84" class="ff">documento</text><text x="12" y="102" class="ff">telefono</text><text x="12" y="120" class="ff">correo</text>
+</g>
+<g transform="translate(970,60)">
+  <rect width="260" height="145" rx="10" class="box"/><rect width="260" height="28" rx="10" class="pk"/><text x="130" y="19" text-anchor="middle" class="tt">DOCENTES</text>
+  <text x="12" y="48" class="ff">PK id_docente</text><text x="12" y="66" class="ff">FK id_usuario</text><text x="12" y="84" class="ff">nombres / apellidos</text><text x="12" y="102" class="ff">documento</text><text x="12" y="120" class="ff">estado</text>
+</g>
+
+<g transform="translate(70,270)">
+  <rect width="230" height="120" rx="10" class="box"/><rect width="230" height="28" rx="10" class="pk"/><text x="115" y="19" text-anchor="middle" class="tt">GRADOS</text>
+  <text x="12" y="48" class="ff">PK id_grado</text><text x="12" y="66" class="ff">nombre</text><text x="12" y="84" class="ff">nivel</text><text x="12" y="102" class="ff">tipo</text>
+</g>
+<g transform="translate(350,260)">
+  <rect width="250" height="145" rx="10" class="box"/><rect width="250" height="28" rx="10" class="pk"/><text x="125" y="19" text-anchor="middle" class="tt">AÑOS_ACADEMICOS</text>
+  <text x="12" y="48" class="ff">PK id_anio</text><text x="12" y="66" class="ff">anio</text><text x="12" y="84" class="ff">fecha_inicio</text><text x="12" y="102" class="ff">fecha_fin</text><text x="12" y="120" class="ff">estado</text>
+</g>
+<g transform="translate(650,260)">
+  <rect width="280" height="145" rx="10" class="box"/><rect width="280" height="28" rx="10" class="pk"/><text x="140" y="19" text-anchor="middle" class="tt">CURSOS</text>
+  <text x="12" y="48" class="ff">PK id_curso</text><text x="12" y="66" class="ff">FK id_grado</text><text x="12" y="84" class="ff">FK id_anio</text><text x="12" y="102" class="ff">nombre</text><text x="12" y="120" class="ff">jornada / estado</text>
+</g>
+<g transform="translate(980,260)">
+  <rect width="270" height="145" rx="10" class="box"/><rect width="270" height="28" rx="10" class="pk"/><text x="135" y="19" text-anchor="middle" class="tt">ESTUDIANTE_CURSO</text>
+  <text x="12" y="48" class="ff">PK id_estudiante_curso</text><text x="12" y="66" class="ff">FK id_estudiante</text><text x="12" y="84" class="ff">FK id_curso</text><text x="12" y="102" class="ff">fecha_inicio</text><text x="12" y="120" class="ff">fecha_fin / estado</text>
+</g>
+
+<g transform="translate(70,470)">
+  <rect width="240" height="145" rx="10" class="box"/><rect width="240" height="28" rx="10" class="pk"/><text x="120" y="19" text-anchor="middle" class="tt">COMPONENTES</text>
+  <text x="12" y="48" class="ff">PK id_componente</text><text x="12" y="66" class="ff">nombre</text><text x="12" y="84" class="ff">tipo</text><text x="12" y="102" class="ff">nivel</text><text x="12" y="120" class="ff">estado</text>
+</g>
+<g transform="translate(360,470)">
+  <rect width="280" height="145" rx="10" class="box"/><rect width="280" height="28" rx="10" class="pk"/><text x="140" y="19" text-anchor="middle" class="tt">ASIGNACIONES_DOCENTES</text>
+  <text x="12" y="48" class="ff">PK id_asignacion</text><text x="12" y="66" class="ff">FK id_docente</text><text x="12" y="84" class="ff">FK id_curso</text><text x="12" y="102" class="ff">FK id_componente</text><text x="12" y="120" class="ff">UNIQUE compuesto</text>
+</g>
+<g transform="translate(690,470)">
+  <rect width="275" height="160" rx="10" class="box"/><rect width="275" height="28" rx="10" class="pk"/><text x="138" y="19" text-anchor="middle" class="tt">DESEMPEÑOS</text>
+  <text x="12" y="48" class="ff">PK id_desempeno</text><text x="12" y="66" class="ff">FK id_componente</text><text x="12" y="84" class="ff">FK id_periodo</text><text x="12" y="102" class="ff">FK id_curso</text><text x="12" y="120" class="ff">descripcion</text><text x="12" y="138" class="ff">tipo / estado</text>
+</g>
+<g transform="translate(1020,470)">
+  <rect width="310" height="175" rx="10" class="box"/><rect width="310" height="28" rx="10" class="pk"/><text x="155" y="19" text-anchor="middle" class="tt">EVALUACIONES_ESTUDIANTE</text>
+  <text x="12" y="48" class="ff">PK id_evaluacion</text><text x="12" y="66" class="ff">FK id_estudiante</text><text x="12" y="84" class="ff">FK id_desempeno</text><text x="12" y="102" class="ff">nivel_desempeno</text><text x="12" y="120" class="ff">valor_numerico</text><text x="12" y="138" class="ff">observacion</text><text x="12" y="156" class="ff">fecha</text>
+</g>
+
+<g transform="translate(50,710)">
+  <rect width="250" height="140" rx="10" class="box"/><rect width="250" height="28" rx="10" class="pk"/><text x="125" y="19" text-anchor="middle" class="tt">PERIODOS</text>
+  <text x="12" y="48" class="ff">PK id_periodo</text><text x="12" y="66" class="ff">FK id_anio</text><text x="12" y="84" class="ff">nombre / numero</text><text x="12" y="102" class="ff">fecha_inicio</text><text x="12" y="120" class="ff">fecha_fin</text>
+</g>
+<g transform="translate(340,710)">
+  <rect width="270" height="155" rx="10" class="box"/><rect width="270" height="28" rx="10" class="pk"/><text x="135" y="19" text-anchor="middle" class="tt">ACTIVIDADES</text>
+  <text x="12" y="48" class="ff">PK id_actividad</text><text x="12" y="66" class="ff">FK id_asignacion</text><text x="12" y="84" class="ff">titulo / descripcion</text><text x="12" y="102" class="ff">publicacion</text><text x="12" y="120" class="ff">fecha_limite</text><text x="12" y="138" class="ff">estado</text>
+</g>
+<g transform="translate(650,710)">
+  <rect width="270" height="155" rx="10" class="box"/><rect width="270" height="28" rx="10" class="pk"/><text x="135" y="19" text-anchor="middle" class="tt">ENTREGAS</text>
+  <text x="12" y="48" class="ff">PK id_entrega</text><text x="12" y="66" class="ff">FK id_actividad</text><text x="12" y="84" class="ff">FK id_estudiante</text><text x="12" y="102" class="ff">fecha_entrega</text><text x="12" y="120" class="ff">estado</text><text x="12" y="138" class="ff">retroalimentacion</text>
+</g>
+<g transform="translate(960,710)">
+  <rect width="260" height="155" rx="10" class="box"/><rect width="260" height="28" rx="10" class="pk"/><text x="130" y="19" text-anchor="middle" class="tt">CASOS_ACOMP.</text><text x="12" y="48" class="ff">PK id_caso</text><text x="12" y="66" class="ff">FK id_estudiante</text><text x="12" y="84" class="ff">FK creador / responsable</text><text x="12" y="102" class="ff">tipo / prioridad</text><text x="12" y="120" class="ff">estado</text><text x="12" y="138" class="ff">fecha_cierre</text>
+</g>
+<g transform="translate(1260,710)">
+  <rect width="200" height="155" rx="10" class="box"/><rect width="200" height="28" rx="10" class="pk"/><text x="100" y="19" text-anchor="middle" class="tt">SEGUIMIENTOS</text><text x="12" y="48" class="ff">PK id_seguimiento</text><text x="12" y="66" class="ff">FK id_caso</text><text x="12" y="84" class="ff">FK id_usuario</text><text x="12" y="102" class="ff">fecha</text><text x="12" y="120" class="ff">accion</text><text x="12" y="138" class="ff">resultado</text></g>
+
+<!-- simplified connectors -->
+<path d="M610 135L660 135" class="ln"/><path d="M920 132L970 132" class="ln"/>
+<path d="M300 330L330 330" class="ln"/><path d="M600 330L650 330" class="ln"/><path d="M930 330L980 330" class="ln"/>
+<path d="M500 405L500 470" class="ln"/><path d="M790 405L790 470" class="ln"/><path d="M1120 405L1120 470" class="ln"/>
+<path d="M640 545L690 545" class="ln"/><path d="M965 550L1020 550" class="ln"/>
+<path d="M790 630L790 710" class="ln"/><path d="M920 785L960 785" class="ln"/><path d="M1220 785L1260 785" class="ln"/>
+</svg>
+</div>
+</section>
+
+<section id="uml">
+<h2>4. UML — Diagrama de clases</h2>
+<p>Vista orientada al diseño de objetos de la aplicación/backend.</p>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1450 900">
+<style>
+.c{fill:#111b31;stroke:#6d85b2;stroke-width:2}.ct{fill:#eef2ff;font:700 14px Segoe UI}.cf{fill:#c5cde0;font:11px Consolas,monospace}.a{stroke:#7488aa;stroke-width:2;fill:none}
+</style>
+<text x="35" y="30" class="ct" font-size="20">UML — Clases principales</text>
+<g transform="translate(50,70)"><rect width="235" height="150" class="c"/><text x="118" y="24" text-anchor="middle" class="ct">Usuario</text><line x1="0" y1="35" x2="235" y2="35" class="a"/><text x="12" y="55" class="cf">+ idUsuario</text><text x="12" y="73" class="cf">+ rol</text><text x="12" y="91" class="cf">+ estado</text><line x1="0" y1="102" x2="235" y2="102" class="a"/><text x="12" y="122" class="cf">+ autenticar()</text><text x="12" y="140" class="cf">+ cerrarSesion()</text></g>
+<g transform="translate(350,70)"><rect width="250" height="175" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Estudiante</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ idEstudiante</text><text x="12" y="73" class="cf">+ codigoCarnet</text><text x="12" y="91" class="cf">+ nombres</text><text x="12" y="109" class="cf">+ apellidos</text><line x1="0" y1="120" x2="250" y2="120" class="a"/><text x="12" y="140" class="cf">+ verActividades()</text><text x="12" y="158" class="cf">+ consultarBoletin()</text></g>
+<g transform="translate(670,70)"><rect width="250" height="165" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Acudiente</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ idAcudiente</text><text x="12" y="73" class="cf">+ nombre</text><text x="12" y="91" class="cf">+ telefono</text><line x1="0" y1="102" x2="250" y2="102" class="a"/><text x="12" y="122" class="cf">+ ingresarPorCarnet()</text><text x="12" y="140" class="cf">+ enviarEntrega()</text><text x="12" y="158" class="cf">+ verSeguimiento()</text></g>
+<g transform="translate(990,70)"><rect width="250" height="165" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Docente</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ idDocente</text><text x="12" y="73" class="cf">+ nombre</text><text x="12" y="91" class="cf">+ estado</text><line x1="0" y1="102" x2="250" y2="102" class="a"/><text x="12" y="122" class="cf">+ crearActividad()</text><text x="12" y="140" class="cf">+ registrarAsistencia()</text><text x="12" y="158" class="cf">+ evaluar()</text></g>
+
+<g transform="translate(80,330)"><rect width="250" height="150" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Curso</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ idCurso</text><text x="12" y="73" class="cf">+ nombre</text><text x="12" y="91" class="cf">+ grado</text><text x="12" y="109" class="cf">+ año</text></g>
+<g transform="translate(390,320)"><rect width="270" height="180" class="c"/><text x="135" y="24" text-anchor="middle" class="ct">ComponenteAcademico</text><line x1="0" y1="35" x2="270" y2="35" class="a"/><text x="12" y="55" class="cf">+ idComponente</text><text x="12" y="73" class="cf">+ nombre</text><text x="12" y="91" class="cf">+ tipo</text><text x="12" y="109" class="cf">+ nivel</text></g>
+<g transform="translate(720,320)"><rect width="250" height="180" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Desempeño</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ idDesempeño</text><text x="12" y="73" class="cf">+ descripción</text><text x="12" y="91" class="cf">+ periodo</text><line x1="0" y1="102" x2="250" y2="102" class="a"/><text x="12" y="122" class="cf">+ definirResultado()</text><text x="12" y="140" class="cf">+ publicar()</text></g>
+<g transform="translate(1020,320)"><rect width="250" height="180" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Evaluacion</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ nivelDesempeño</text><text x="12" y="73" class="cf">+ valorNumerico</text><text x="12" y="91" class="cf">+ observación</text><line x1="0" y1="102" x2="250" y2="102" class="a"/><text x="12" y="122" class="cf">+ guardar()</text><text x="12" y="140" class="cf">+ generarBoletin()</text></g>
+
+<g transform="translate(120,610)"><rect width="250" height="165" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">Actividad</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ titulo</text><text x="12" y="73" class="cf">+ descripcion</text><text x="12" y="91" class="cf">+ fechaLimite</text><line x1="0" y1="102" x2="250" y2="102" class="a"/><text x="12" y="122" class="cf">+ publicar()</text><text x="12" y="140" class="cf">+ cerrar()</text></g>
+<g transform="translate(450,610)"><rect width="260" height="165" class="c"/><text x="130" y="24" text-anchor="middle" class="ct">Entrega</text><line x1="0" y1="35" x2="260" y2="35" class="a"/><text x="12" y="55" class="cf">+ fechaEntrega</text><text x="12" y="73" class="cf">+ estado</text><text x="12" y="91" class="cf">+ retroalimentacion</text><line x1="0" y1="102" x2="260" y2="102" class="a"/><text x="12" y="122" class="cf">+ adjuntarArchivo()</text><text x="12" y="140" class="cf">+ enviar()</text></g>
+<g transform="translate(800,610)"><rect width="250" height="165" class="c"/><text x="125" y="24" text-anchor="middle" class="ct">CasoAcompanamiento</text><line x1="0" y1="35" x2="250" y2="35" class="a"/><text x="12" y="55" class="cf">+ tipo</text><text x="12" y="73" class="cf">+ prioridad</text><text x="12" y="91" class="cf">+ estado</text><line x1="0" y1="102" x2="250" y2="102" class="a"/><text x="12" y="122" class="cf">+ abrir()</text><text x="12" y="140" class="cf">+ cerrar()</text></g>
+
+<path d="M600 155L670 155M920 150L990 150" class="a"/>
+<path d="M475 245L250 330M720 245L250 330M795 500L845 610M970 410L1020 410M660 410L720 410M330 690L450 690" class="a"/>
+<path d="M710 695L800 695" class="a"/>
+</svg>
+</div>
+</section>
+
+<section id="use">
+<h2>5. UML — Casos de uso</h2>
+<p>Qué puede hacer cada actor dentro de la solución.</p>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1450 800">
+<style>
+.uc{fill:#14223c;stroke:#76a9ff;stroke-width:2}.act{fill:#17213a;stroke:#67e8c7;stroke-width:2}.u{stroke:#8090af;stroke-width:2}.txt{fill:#eef2ff;font:13px Segoe UI}.tt{fill:#eef2ff;font:700 15px Segoe UI}
+</style>
+<text x="30" y="30" class="tt" font-size="20">Casos de uso — actores y funcionalidades</text>
+<rect x="290" y="55" width="1080" height="690" rx="20" fill="#0d1528" stroke="#2b3a58"/>
+<!-- actors -->
+<g class="act"><circle cx="90" cy="150" r="30"/><line x1="90" y1="180" x2="90" y2="255" class="u"/><line x1="55" y1="205" x2="125" y2="205" class="u"/><line x1="90" y1="255" x2="60" y2="310" class="u"/><line x1="90" y1="255" x2="120" y2="310" class="u"/><text x="90" y="340" text-anchor="middle" class="txt">Docente</text></g>
+<g class="act"><circle cx="90" cy="420" r="30"/><line x1="90" y1="450" x2="90" y2="525" class="u"/><line x1="55" y1="475" x2="125" y2="475" class="u"/><line x1="90" y1="525" x2="60" y2="580" class="u"/><line x1="90" y1="525" x2="120" y2="580" class="u"/><text x="90" y="610" text-anchor="middle" class="txt">Acudiente</text></g>
+<g class="act"><circle cx="1390" cy="170" r="30"/><line x1="1390" y1="200" x2="1390" y2="275" class="u"/><line x1="1355" y1="225" x2="1425" y2="225" class="u"/><line x1="1390" y1="275" x2="1360" y2="330" class="u"/><line x1="1390" y1="275" x2="1420" y2="330" class="u"/><text x="1390" y="360" text-anchor="middle" class="txt">Directivo</text></g>
+
+<g class="uc">
+<ellipse cx="480" cy="130" rx="130" ry="34"/><text x="480" y="136" text-anchor="middle" class="txt">Registrar asistencia</text>
+<ellipse cx="750" cy="130" rx="130" ry="34"/><text x="750" y="136" text-anchor="middle" class="txt">Crear actividad</text>
+<ellipse cx="1020" cy="130" rx="130" ry="34"/><text x="1020" y="136" text-anchor="middle" class="txt">Evaluar desempeño</text>
+<ellipse cx="620" cy="275" rx="140" ry="34"/><text x="620" y="281" text-anchor="middle" class="txt">Revisar entregas</text>
+<ellipse cx="940" cy="275" rx="150" ry="34"/><text x="940" y="281" text-anchor="middle" class="txt">Registrar observación</text>
+<ellipse cx="1150" cy="420" rx="160" ry="34"/><text x="1150" y="426" text-anchor="middle" class="txt">Gestionar acompañamiento</text>
+<ellipse cx="620" cy="420" rx="150" ry="34"/><text x="620" y="426" text-anchor="middle" class="txt">Ingresar con código de carnet</text>
+<ellipse cx="950" cy="560" rx="150" ry="34"/><text x="950" y="566" text-anchor="middle" class="txt">Consultar boletín</text>
+<ellipse cx="620" cy="560" rx="140" ry="34"/><text x="620" y="566" text-anchor="middle" class="txt">Subir entrega</text>
+<ellipse cx="1140" cy="650" rx="155" ry="34"/><text x="1140" y="656" text-anchor="middle" class="txt">Consultar estadísticas</text>
+<ellipse cx="860" cy="690" rx="130" ry="34"/><text x="860" y="696" text-anchor="middle" class="txt">Publicar comunicado</text>
+</g>
+
+<path d="M125 205L345 135M125 205L620 130M125 205L890 130M125 205L480 275M125 205L790 275M125 255L990 420" class="u"/>
+<path d="M125 475L470 420M125 475L480 560M125 475L800 560M125 475L980 420" class="u"/>
+<path d="M1355 225L1255 650M1355 225L990 690M1355 225L1240 420M1355 225L1090 560" class="u"/>
+</svg>
+</div>
+</section>
+
+<section id="act">
+<h2>6. Diagramas de actividad — flujos principales</h2>
+<div class="grid">
+<div class="card">
+<h3>A. Acceso del acudiente</h3>
+<div class="pill">Abrir app</div> →
+<div class="pill">Ingresar código de carnet</div> →
+<div class="pill">Validar código</div> →
+<div class="pill">¿Existe?</div> →
+<div class="pill">Cargar portal del estudiante</div>
+<p class="small">Si el código es inválido, se muestra error y no se expone información del estudiante.</p>
+</div>
+<div class="card">
+<h3>B. Entrega de actividad</h3>
+<div class="pill">Consultar actividad</div> →
+<div class="pill">Seleccionar archivo/enlace</div> →
+<div class="pill">Validar formato</div> →
+<div class="pill">Subir</div> →
+<div class="pill">Registrar entrega</div> →
+<div class="pill">Notificar docente</div>
+</div>
+<div class="card">
+<h3>C. Reporte y acompañamiento</h3>
+<div class="pill">Docente registra situación</div> →
+<div class="pill">Crear caso</div> →
+<div class="pill">Asignar responsable</div> →
+<div class="pill">Seguimiento</div> →
+<div class="pill">Comunicación al acudiente</div> →
+<div class="pill">Cerrar caso</div>
+</div>
+</div>
+</section>
+
+<section id="seq">
+<h2>7. UML — Diagrama de secuencia: acceso por carnet</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1450 650">
+<style>
+.life{stroke:#60769d;stroke-dasharray:7 7;stroke-width:2}.actor{fill:#16243e;stroke:#76a9ff;stroke-width:2}.msg{stroke:#67e8c7;stroke-width:2}.ret{stroke:#7785a0;stroke-dasharray:5 5;stroke-width:2}.t{fill:#eef2ff;font:13px Segoe UI}.tt{fill:#eef2ff;font:700 15px Segoe UI}.box{fill:#111b31;stroke:#50658f}
+</style>
+<text x="30" y="30" class="tt" font-size="20">Secuencia — ingreso del acudiente con código de carnet</text>
+<g>
+<rect x="70" y="60" width="150" height="45" rx="10" class="actor"/><text x="145" y="88" text-anchor="middle" class="t">Acudiente</text>
+<rect x="345" y="60" width="160" height="45" rx="10" class="actor"/><text x="425" y="88" text-anchor="middle" class="t">App móvil</text>
+<rect x="650" y="60" width="190" height="45" rx="10" class="actor"/><text x="745" y="88" text-anchor="middle" class="t">Backend / API</text>
+<rect x="1010" y="60" width="180" height="45" rx="10" class="actor"/><text x="1100" y="88" text-anchor="middle" class="t">PostgreSQL</text>
+<rect x="1280" y="60" width="120" height="45" rx="10" class="actor"/><text x="1340" y="88" text-anchor="middle" class="t">Storage</text>
+<line x1="145" y1="105" x2="145" y2="580" class="life"/><line x1="425" y1="105" x2="425" y2="580" class="life"/><line x1="745" y1="105" x2="745" y2="580" class="life"/><line x1="1100" y1="105" x2="1100" y2="580" class="life"/><line x1="1340" y1="105" x2="1340" y2="580" class="life"/>
+<line x1="145" y1="155" x2="425" y2="155" class="msg"/><text x="280" y="147" class="t">1. Enviar codigo_carnet</text>
+<line x1="425" y1="215" x2="745" y2="215" class="msg"/><text x="565" y="207" class="t">2. POST /acceso-carnet</text>
+<line x1="745" y1="275" x2="1100" y2="275" class="msg"/><text x="830" y="267" class="t">3. Buscar código único</text>
+<line x1="1100" y1="335" x2="745" y2="335" class="ret"/><text x="820" y="327" class="t">4. Estudiante + estado</text>
+<line x1="745" y1="395" x2="425" y2="395" class="ret"/><text x="515" y="387" class="t">5. Sesión/contexto del acudiente</text>
+<line x1="425" y1="455" x2="145" y2="455" class="ret"/><text x="250" y="447" class="t">6. Mostrar portal</text>
+<line x1="425" y1="515" x2="745" y2="515" class="msg"/><text x="535" y="507" class="t">7. Solicitar actividades</text>
+<line x1="745" y1="545" x2="1100" y2="545" class="msg"/><text x="825" y="537" class="t">8. Consultar datos</text>
+</g>
+</svg>
+</div>
+<div class="warn"><strong>Seguridad:</strong> un código de carnet por sí solo funciona como identificador de acceso. Antes de producción conviene añadir al menos una segunda validación (por ejemplo, PIN/fecha de nacimiento/validación institucional) para evitar que alguien que conozca el código pueda acceder a información infantil.</div>
+</section>
+
+<section id="arch">
+<h2>8. Arquitectura propuesta</h2>
+<div class="diagram-wrap">
+<svg viewBox="0 0 1450 720">
+<style>
+.node{fill:#12203a;stroke:#6b84b1;stroke-width:2}.store{fill:#132f2d;stroke:#67e8c7;stroke-width:2}.out{fill:#34280f;stroke:#ffd166;stroke-width:2}.t{fill:#eef2ff;font:700 16px Segoe UI}.s{fill:#bfc9df;font:12px Segoe UI}.ln{stroke:#7183a6;stroke-width:2;fill:none}
+</style>
+<text x="30" y="30" class="t" font-size="20">Arquitectura lógica de despliegue</text>
+<rect x="60" y="90" width="260" height="180" rx="16" class="node"/><text x="190" y="125" text-anchor="middle" class="t">Aplicación móvil</text><text x="80" y="158" class="s">• Docente</text><text x="80" y="180" class="s">• Acudiente</text><text x="80" y="202" class="s">• Directivo</text><text x="80" y="224" class="s">• Consulta y carga de archivos</text>
+<rect x="420" y="70" width="270" height="220" rx="16" class="node"/><text x="555" y="105" text-anchor="middle" class="t">Backend / API</text><text x="440" y="140" class="s">• Autorización por rol</text><text x="440" y="162" class="s">• Acceso por código de carnet</text><text x="440" y="184" class="s">• Lógica académica</text><text x="440" y="206" class="s">• Seguimiento</text><text x="440" y="228" class="s">• Generación de boletines</text><text x="440" y="250" class="s">• Validación de archivos</text>
+<rect x="800" y="90" width="280" height="180" rx="16" class="store"/><text x="940" y="125" text-anchor="middle" class="t">PostgreSQL / Supabase</text><text x="820" y="158" class="s">Datos estructurados</text><text x="820" y="180" class="s">Estudiantes · cursos · docentes</text><text x="820" y="202" class="s">Evaluaciones · asistencia</text><text x="820" y="224" class="s">Actividades · entregas</text><text x="820" y="246" class="s">Seguimiento · comunicación</text>
+<rect x="1160" y="90" width="220" height="180" rx="16" class="out"/><text x="1270" y="125" text-anchor="middle" class="t">Object Storage</text><text x="1180" y="160" class="s">PDF / DOCX</text><text x="1180" y="182" class="s">JPG / PNG</text><text x="1180" y="204" class="s">Otros archivos</text><text x="1180" y="226" class="s">URLs externas</text>
+<path d="M320 180L420 180" class="ln"/><path d="M690 180L800 180" class="ln"/><path d="M690 225L1160 225" class="ln"/>
+<rect x="235" y="380" width="980" height="220" rx="18" fill="#0c1427" stroke="#2b3a58"/>
+<text x="725" y="420" text-anchor="middle" class="t">Flujos principales</text>
+<text x="270" y="465" class="s">1. Acudiente → código de carnet → API → estudiante asociado → portal.</text>
+<text x="270" y="495" class="s">2. Docente → actividad → almacenamiento de guía → estudiantes/acudientes.</text>
+<text x="270" y="525" class="s">3. Acudiente → entrega → Storage + BD → docente.</text>
+<text x="270" y="555" class="s">4. Docente → evaluación/observación → BD → boletín/seguimiento.</text>
+</svg>
+</div>
+</section>
+
+<section id="reglas">
+<h2>9. Reglas de negocio y decisiones</h2>
+<table>
+<thead><tr><th>#</th><th>Regla</th><th>Implicación en BD</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Cada estudiante tiene un código de carnet único.</td><td><code>estudiantes.codigo_carnet UNIQUE NOT NULL</code></td></tr>
+<tr><td>2</td><td>El acudiente entra por el código del estudiante, no por correo/contraseña.</td><td>El flujo de autenticación debe resolver el estudiante a partir del código.</td></tr>
+<tr><td>3</td><td>Un estudiante puede tener uno o varios acudientes.</td><td>Tabla intermedia <code>estudiante_acudiente</code>.</td></tr>
+<tr><td>4</td><td>Un estudiante cambia de curso/año sin perder su historial.</td><td><code>estudiante_curso</code> conserva el historial.</td></tr>
+<tr><td>5</td><td>Preescolar y primaria no usan exactamente los mismos componentes.</td><td><code>componentes_academicos</code> con tipo/nivel.</td></tr>
+<tr><td>6</td><td>El boletín combina desempeño, nivel y valor numérico.</td><td><code>desempeños</code> + <code>evaluaciones_estudiante</code>.</td></tr>
+<tr><td>7</td><td>Las actividades pueden usar archivos y enlaces.</td><td>Tablas separadas de archivos y enlaces.</td></tr>
+<tr><td>8</td><td>Los archivos no deben guardarse dentro de PostgreSQL.</td><td>Storage + URL/metadatos en BD.</td></tr>
+<tr><td>9</td><td>Los casos de acompañamiento tienen historial.</td><td><code>casos_acompanamiento</code> + <code>seguimientos</code>.</td></tr>
+<tr><td>10</td><td>Finanzas y matrículas están fuera del alcance actual.</td><td>No se modelan esas entidades en el MVP.</td></tr>
+</tbody>
+</table>
+
+<h3>Catálogo inicial de roles</h3>
+<div class="pill">ADMINISTRADOR</div>
+<div class="pill">DIRECTIVO</div>
+<div class="pill">DOCENTE</div>
+<div class="pill">ACUDIENTE</div>
+
+<h3>Catálogo inicial de estados</h3>
+<div class="pill">PRESENTE</div>
+<div class="pill">AUSENTE</div>
+<div class="pill">TARDANZA</div>
+<div class="pill">EXCUSA</div>
+<div class="pill">LOGRADO</div>
+<div class="pill">EN PROCESO</div>
+<div class="pill">REQUIERE ACOMPAÑAMIENTO</div>
+<div class="pill">ABIERTO</div>
+<div class="pill">EN SEGUIMIENTO</div>
+<div class="pill">CERRADO</div>
+
+<div class="note" style="margin-top:18px">
+  <strong>Alcance actual:</strong> estudiantes, acudientes, docentes, cursos, periodos, componentes académicos, evaluación, asistencia, actividades, entregas, observaciones, acompañamiento y comunicación. Matrículas, pagos, pensiones y contabilidad no forman parte del modelo actual.
+</div>
+</section>
+
+<div class="footer">Documento visual autocontenido. No utiliza librerías externas ni requiere conexión a Internet para abrirse.</div>
+</main>
+
+<script>
+function go(id){
+  document.getElementById(id).scrollIntoView({behavior:'smooth',block:'start'});
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('active'));
+}
+</script>
+</body>
+</html>
